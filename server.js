@@ -16,12 +16,24 @@ const io = new Server(server);
 const PORT = process.env.PORT || 8412;
 const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'data', 'games.json');
+const LOG_DIR = path.resolve(process.env.LOG_DIR || path.join(__dirname, 'tmp'));
+const LOG_FILE = path.join(LOG_DIR, 'voter.log');
 
-// Logging helper
-const log = (msg, data = {}) => {
+function ensureLogDir() {
+  if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+function log(msg, data = {}) {
   const time = new Date().toISOString();
+  const line = `[${time}] ${msg}` + (Object.keys(data).length ? ' ' + JSON.stringify(data) : '') + '\n';
   console.log(`[${time}] ${msg}`, Object.keys(data).length ? JSON.stringify(data) : '');
-};
+  try {
+    ensureLogDir();
+    fs.appendFileSync(LOG_FILE, line);
+  } catch (e) {
+    console.error('Log write error:', e.message);
+  }
+}
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -183,6 +195,7 @@ io.on('connection', (socket) => {
     }
     const game = games.get(gameId);
     if (!game) {
+      log('Join failed: game not found', { gameId });
       socket.emit('error', { message: 'Partie introuvable' });
       return;
     }
@@ -214,6 +227,7 @@ io.on('connection', (socket) => {
     socket.emit('game-state', game);
     io.to(gameId).emit('participant-joined', game);
     saveGames();
+    log('Player joined', { gameId, playerName: name || 'Anonyme', asSpectator });
   });
 
   socket.on('vote', ({ value }) => {
@@ -228,6 +242,7 @@ io.on('connection', (socket) => {
     game.votes[socket.id] = { value, name: participant.name };
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Vote', { gameId, playerName: participant.name, value });
   });
 
   socket.on('reveal-votes', () => {
@@ -244,6 +259,7 @@ io.on('connection', (socket) => {
     }
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Votes revealed', { gameId });
   });
 
   socket.on('next-issue', () => {
@@ -257,6 +273,7 @@ io.on('connection', (socket) => {
     game.voteTimerEnd = null;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Next issue', { gameId, index: game.currentIssueIndex });
   });
 
   socket.on('previous-issue', () => {
@@ -270,6 +287,7 @@ io.on('connection', (socket) => {
     game.voteTimerEnd = null;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Previous issue', { gameId, index: game.currentIssueIndex });
   });
 
   socket.on('go-to-issue', ({ index }) => {
@@ -284,6 +302,7 @@ io.on('connection', (socket) => {
     game.voteTimerEnd = null;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Go to issue', { gameId, index: idx });
   });
 
   socket.on('reset-votes', () => {
@@ -296,6 +315,7 @@ io.on('connection', (socket) => {
     game.voteTimerEnd = null;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Votes reset', { gameId });
   });
 
   socket.on('start-vote-timer', ({ seconds }) => {
@@ -307,6 +327,7 @@ io.on('connection', (socket) => {
     game.voteTimerEnd = Date.now() + sec * 1000;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Vote timer started', { gameId, seconds: sec });
   });
 
   socket.on('add-issue', ({ title, description }) => {
@@ -323,6 +344,7 @@ io.on('connection', (socket) => {
     });
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Issue added', { gameId, title: title.trim() });
   });
 
   socket.on('edit-issue', ({ issueId, title, description }) => {
@@ -336,6 +358,7 @@ io.on('connection', (socket) => {
     if (description !== undefined) issue.description = String(description || '').trim().substring(0, 500);
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Issue edited', { gameId, issueId });
   });
 
   socket.on('delete-issue', ({ issueId }) => {
@@ -351,6 +374,7 @@ io.on('connection', (socket) => {
     game.revealed = false;
     io.to(gameId).emit('game-state', game);
     saveGames();
+    log('Issue deleted', { gameId, issueId });
   });
 
   socket.on('disconnect', () => {
@@ -381,5 +405,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, HOST, () => {
-  log(`Planning Poker server running at http://${HOST}:${PORT}`);
+  ensureLogDir();
+  log('Server started', { port: PORT, host: HOST, logFile: LOG_FILE });
 });
