@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partie - Voter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="game-page">
+  <header class="game-header">
+    <div class="game-header-left">
+      <a href="/" class="logo-small">Voter</a>
+      <span class="game-name" id="gameName">—</span>
+      <div id="connectionIndicator"></div>
+    </div>
+    <div class="game-header-right">
+      <button type="button" id="themeToggle" class="theme-toggle" aria-label="Changer le thème">☀️</button>
+      <div class="share-box">
+        <label for="gameUrl">Partager l'URL :</label>
+        <div class="share-input-group">
+          <input type="text" id="gameUrl" readonly aria-label="URL de la partie">
+          <button type="button" id="copyUrl" class="btn btn-ghost">Copier</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="game-layout">
+    <aside class="game-sidebar">
+      <section class="sidebar-section">
+        <h3>Participants (<span id="participantCount">0</span>)</h3>
+        <ul id="participantsList"></ul>
+      </section>
+      <section class="sidebar-section" id="facilitatorSection">
+        <h3>Issues</h3>
+        <ul id="issuesList"></ul>
+        <button type="button" id="addIssueBtn" class="btn btn-ghost btn-small">+ Ajouter</button>
+      </section>
+    </aside>
+
+    <main class="game-main">
+      <div id="joinPrompt" class="join-prompt" style="display: none;">
+        <div class="join-form-card">
+          <h2>Rejoindre la partie</h2>
+          <p>Entrez votre nom pour participer au vote.</p>
+          <form id="joinForm">
+            <input type="text" id="playerName" placeholder="Votre nom" maxlength="50" required aria-label="Votre nom">
+            <label class="checkbox-label">
+              <input type="checkbox" id="joinAsSpectator">
+              Rejoindre en spectateur
+            </label>
+            <button type="submit" class="btn btn-primary">Rejoindre</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="gameContent" class="game-content" style="display: none;">
+        <div class="current-issue">
+          <h2>Issue actuelle</h2>
+          <div id="currentIssueCard" class="issue-card">
+            <h3 id="currentIssueTitle">Aucune issue</h3>
+            <p id="currentIssueDesc" class="issue-desc"></p>
+          </div>
+        </div>
+
+        <div class="voting-area" id="votingArea">
+          <div id="voteTimer" class="vote-timer" style="display:none"></div>
+          <h3>Choisissez votre estimation</h3>
+          <div class="vote-cards" id="voteCards" role="group" aria-label="Cartes de vote"></div>
+        </div>
+
+        <div class="results-area" id="resultsArea">
+          <h3>Résultats du vote</h3>
+          <div id="resultsGrid" class="results-grid"></div>
+          <div id="facilitatorControls" class="facilitator-controls">
+            <div class="timer-control">
+              <input type="number" id="timerSeconds" min="5" max="300" value="60" aria-label="Durée du timer en secondes">
+              <button type="button" id="startTimerBtn" class="btn btn-ghost btn-small">Timer</button>
+            </div>
+            <button type="button" id="revealBtn" class="btn btn-primary">Révéler les votes</button>
+            <button type="button" id="resetBtn" class="btn btn-ghost">Réinitialiser</button>
+            <div class="issue-nav">
+              <button type="button" id="prevIssueBtn" class="btn btn-ghost">← Précédent</button>
+              <button type="button" id="nextIssueBtn" class="btn btn-ghost">Suivant →</button>
+            </div>
+            <button type="button" id="exportBtn" class="btn btn-ghost btn-small">Exporter CSV</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="addIssueModal" class="modal" style="display: none;" role="dialog" aria-labelledby="addIssueTitle">
+    <div class="modal-content">
+      <h3 id="addIssueTitle">Ajouter une issue</h3>
+      <form id="addIssueForm">
+        <input type="text" id="newIssueTitle" placeholder="Titre" required maxlength="200" aria-label="Titre de l'issue">
+        <input type="text" id="newIssueDesc" placeholder="Description (optionnel)" maxlength="500">
+        <div class="modal-actions">
+          <button type="button" id="cancelAddIssue" class="btn btn-ghost">Annuler</button>
+          <button type="submit" class="btn btn-primary">Ajouter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editIssueModal" class="modal" style="display: none;" role="dialog" aria-labelledby="editIssueTitle">
+    <div class="modal-content">
+      <h3 id="editIssueTitle">Modifier l'issue</h3>
+      <form id="editIssueForm">
+        <input type="hidden" id="editIssueId">
+        <input type="text" id="editIssueTitleInput" placeholder="Titre" required maxlength="200">
+        <input type="text" id="editIssueDescInput" placeholder="Description (optionnel)" maxlength="500">
+        <div class="modal-actions">
+          <button type="button" id="deleteIssueBtn" class="btn btn-ghost" style="color:#ef4444">Supprimer</button>
+          <button type="button" id="cancelEditIssue" class="btn btn-ghost">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/utils.js"></script>
+<script src="/game.js"></script>
+</html>

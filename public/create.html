@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer une partie - Voter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="/" class="logo">Voter</a>
+      <div class="nav-links">
+        <a href="/">Accueil</a>
+        <a href="/join">Rejoindre</a>
+        <a href="/create" class="btn btn-primary">Nouvelle partie</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="create-page">
+    <section class="create-form-section">
+      <h1>Nouvelle partie de Planning Poker</h1>
+      <p class="create-subtitle">Configurez votre session d'estimation en quelques clics.</p>
+
+      <form id="create-form" class="create-form">
+        <div class="form-group">
+          <label for="gameName">Nom de la partie</label>
+          <input type="text" id="gameName" placeholder="ex: Sprint 42 Planning" maxlength="100" required>
+        </div>
+        <div class="form-group">
+          <label for="facilitatorName">Votre nom (facilitateur)</label>
+          <input type="text" id="facilitatorName" placeholder="ex: Marie Dupont" maxlength="50" required>
+        </div>
+        <div class="form-group">
+          <label for="cardPreset">Type de cartes</label>
+          <select id="cardPreset">
+            <option value="fibonacci">Fibonacci (1, 2, 3, 5, 8, 13, 21, ?)</option>
+            <option value="tshirt">T-shirt (XS, S, M, L, XL, ?)</option>
+            <option value="fibonacci_extended">Fibonacci étendu (0–89, ?)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Issues à estimer (optionnel)</label>
+          <div id="issues-container">
+            <div class="issue-row">
+              <input type="text" class="issue-title" placeholder="Titre de l'issue" maxlength="200">
+              <input type="text" class="issue-desc" placeholder="Description (optionnel)" maxlength="500">
+            </div>
+          </div>
+          <button type="button" id="add-issue" class="btn btn-ghost">+ Ajouter une issue</button>
+          <div class="import-row">
+            <input type="file" id="csvInput" accept=".csv" style="display:none">
+            <button type="button" id="importCsv" class="btn btn-ghost btn-small">Importer CSV</button>
+          </div>
+        </div>
+        <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
+          <span class="btn-text">Créer et rejoindre</span>
+          <span class="loader" id="createLoader" style="display:none"></span>
+        </button>
+      </form>
+    </section>
+  </main>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/utils.js"></script>
+<script>
+  const socket = io();
+  const form = document.getElementById('create-form');
+  const issuesContainer = document.getElementById('issues-container');
+  const addIssueBtn = document.getElementById('add-issue');
+  const submitBtn = document.getElementById('submitBtn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const createLoader = document.getElementById('createLoader');
+  const csvInput = document.getElementById('csvInput');
+  const importCsvBtn = document.getElementById('importCsv');
+
+  addIssueBtn.addEventListener('click', () => {
+    const row = document.createElement('div');
+    row.className = 'issue-row';
+    row.innerHTML = `
+      <input type="text" class="issue-title" placeholder="Titre de l'issue" maxlength="200">
+      <input type="text" class="issue-desc" placeholder="Description (optionnel)" maxlength="500">
+    `;
+    issuesContainer.appendChild(row);
+  });
+
+  importCsvBtn.addEventListener('click', () => csvInput.click());
+  csvInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const parseCsvLine = (line) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') inQuotes = !inQuotes;
+          else if (c === ',' && !inQuotes) {
+            result.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+            current = '';
+          } else current += c;
+        }
+        result.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+        return result;
+      };
+      const headers = lines[0] ? parseCsvLine(lines[0]).map(h => h.trim().toLowerCase()) : [];
+      const titleIdx = headers.findIndex(h => ['title','titre','name','nom','issue','story'].includes(h));
+      const descIdx = headers.findIndex(h => ['description','desc'].includes(h));
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        const title = (titleIdx >= 0 ? cols[titleIdx] : cols[0]) || '';
+        const desc = (descIdx >= 0 ? cols[descIdx] : cols[1]) || '';
+        if (title) {
+          const row = document.createElement('div');
+          row.className = 'issue-row';
+          const tit = String(title).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const des = String(desc).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          row.innerHTML = `<input type="text" class="issue-title" value="${tit}" maxlength="200"><input type="text" class="issue-desc" value="${des}" maxlength="500">`;
+          issuesContainer.appendChild(row);
+        }
+      }
+      showToast('Issues importées avec succès', 'success');
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  socket.on('game-created', ({ gameId, game }) => {
+    sessionStorage.setItem(`voter_${gameId}`, game.facilitator);
+    window.location.href = `/game/${gameId}`;
+  });
+
+  socket.on('error', (data) => {
+    createLoader.style.display = 'none';
+    btnText.style.display = 'inline';
+    submitBtn.disabled = false;
+    showToast(data.message || 'Une erreur est survenue', 'error');
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const gameName = document.getElementById('gameName').value.trim();
+    const facilitatorName = document.getElementById('facilitatorName').value.trim();
+    const cardPreset = document.getElementById('cardPreset').value;
+    if (!gameName || !facilitatorName) {
+      showToast('Nom de partie et facilitateur requis', 'error');
+      return;
+    }
+    const issueRows = issuesContainer.querySelectorAll('.issue-row');
+    const issues = [];
+    issueRows.forEach((row) => {
+      const title = row.querySelector('.issue-title').value.trim();
+      if (title) {
+        const desc = row.querySelector('.issue-desc').value.trim();
+        issues.push({ id: Date.now(), title, description: desc });
+      }
+    });
+    submitBtn.disabled = true;
+    btnText.style.display = 'none';
+    createLoader.style.display = 'inline-block';
+    socket.emit('create-game', { gameName, facilitatorName, issues, cardPreset });
+  });
+</script>
+</html>

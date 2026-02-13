@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rejoindre une partie - Voter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="/" class="logo">Voter</a>
+      <div class="nav-links">
+        <a href="/">Accueil</a>
+        <a href="/create" class="btn btn-primary">Nouvelle partie</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="join-page">
+    <section class="join-form-section">
+      <h1>Rejoindre une partie</h1>
+      <p class="join-subtitle">Entrez l'URL de la partie ou son identifiant.</p>
+      <form id="joinForm" class="join-form">
+        <div class="form-group">
+          <label for="gameInput">URL ou ID de la partie</label>
+          <input type="text" id="gameInput" placeholder="ex: abc123 ou https://.../game/abc123" required>
+        </div>
+        <div class="form-group">
+          <label for="playerName">Votre nom</label>
+          <input type="text" id="playerName" placeholder="Votre nom" maxlength="50" required>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="asSpectator">
+            Rejoindre en spectateur (observer sans voter)
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Rejoindre</button>
+      </form>
+    </section>
+  </main>
+</body>
+<script>
+  document.getElementById('joinForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    let input = document.getElementById('gameInput').value.trim();
+    const match = input.match(/\/game\/([a-z0-9]+)/i) || input.match(/^([a-z0-9]+)$/i);
+    const gameId = match ? match[1] : input;
+    const playerName = document.getElementById('playerName').value.trim();
+    const asSpectator = document.getElementById('asSpectator').checked;
+    sessionStorage.setItem(`voter_${gameId}`, playerName || 'Spectateur');
+    const params = new URLSearchParams();
+    params.set('name', playerName || 'Spectateur');
+    if (asSpectator) params.set('spectator', '1');
+    window.location.href = `/game/${gameId}?${params.toString()}`;
+  });
+</script>
+</html>
