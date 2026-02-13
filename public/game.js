@@ -133,7 +133,7 @@ socket.on('error', (data) => {
 
 function renderGame(game) {
   gameNameEl.textContent = game.name;
-  gameUrlEl.value = window.location.href;
+  gameUrlEl.value = (window.VOTER_BASE_URL || window.location.origin) + '/game/' + gameId;
 
   const isSpectator = game.spectators?.some((s) => s.id === mySocketId);
   const isFacilitator = game.facilitatorSocketId === mySocketId;

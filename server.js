@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
@@ -105,7 +107,10 @@ app.get('/join', (req, res) => {
 });
 
 app.get('/game/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'game.html'));
+  const baseUrl = process.env.BASE_URL || 'https://voter.frank42.fr';
+  let html = fs.readFileSync(path.join(__dirname, 'public', 'game.html'), 'utf8');
+  html = html.replace('__BASE_URL__', baseUrl.replace(/\/$/, ''));
+  res.type('html').send(html);
 });
 
 // Card presets

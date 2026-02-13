@@ -26,6 +26,8 @@ Le serveur démarre sur http://localhost:3000
 
 ## Variables d'environnement
 
+Copiez `env.example` vers `.env` et modifiez les valeurs. Le fichier `.env` est chargé automatiquement au démarrage via `dotenv`.
+
 Voir `env.example` :
 - `PORT` : Port (défaut 3000)
 - `HOST` : Interface d'écoute (défaut 0.0.0.0)
