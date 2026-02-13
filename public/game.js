@@ -264,13 +264,33 @@ voteCards.addEventListener('click', (e) => {
   if (typeof showToast === 'function') showToast('Vote enregistré', 'success');
 });
 
-copyUrlBtn.addEventListener('click', () => {
-  gameUrlEl.select();
-  navigator.clipboard?.writeText(gameUrlEl.value).then(() => {
+copyUrlBtn.addEventListener('click', async () => {
+  const url = gameUrlEl.value;
+  const showSuccess = () => {
     copyUrlBtn.textContent = 'Copié !';
     if (typeof showToast === 'function') showToast('URL copiée', 'success');
     setTimeout(() => (copyUrlBtn.textContent = 'Copier'), 1500);
-  });
+  };
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      showSuccess();
+      return;
+    }
+  } catch (_) {}
+  const textarea = document.createElement('textarea');
+  textarea.value = url;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    showSuccess();
+  } catch (_) {
+    if (typeof showToast === 'function') showToast('Copie échouée', 'error');
+  }
+  textarea.remove();
 });
 
 revealBtn.addEventListener('click', () => socket.emit('reveal-votes'));

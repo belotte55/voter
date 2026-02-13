@@ -174,8 +174,20 @@ body {
 }
 
 .btn-hero {
-  font-size: 1.1rem;
-  padding: 1rem 2rem;
+  font-size: 1.15rem;
+  padding: 1rem 2.25rem;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn-hero:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
 }
 
 .hero-decoration {
