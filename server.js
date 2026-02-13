@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // Config
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8412;
 const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'data', 'games.json');
 
