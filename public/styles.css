@@ -864,6 +864,10 @@ body {
   gap: 0.5rem;
 }
 
+.timer-control .timer-auto-reveal {
+  margin-left: 0.25rem;
+}
+
 .timer-control input {
   width: 56px;
   padding: 0.5rem 0.5rem;

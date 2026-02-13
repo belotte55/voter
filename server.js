@@ -66,6 +66,7 @@ function loadGames() {
         game.facilitatorSocketId = null;
         game.revealed = false;
         game.voteTimerEnd = null;
+        game.autoRevealOnTimerEnd = game.autoRevealOnTimerEnd || false;
         game.cards = game.cards || ['1', '2', '3', '5', '8', '13', '21', '?'];
         map.set(k, game);
       });
@@ -176,6 +177,7 @@ io.on('connection', (socket) => {
       votes: {},
       revealed: false,
       voteTimerEnd: null,
+      autoRevealOnTimerEnd: false,
       participants: [{ id: socket.id, name: facilitatorName.trim(), isFacilitator: true }],
       spectators: [],
     };
@@ -328,6 +330,16 @@ io.on('connection', (socket) => {
     io.to(gameId).emit('game-state', game);
     saveGames();
     log('Vote timer started', { gameId, seconds: sec });
+  });
+
+  socket.on('set-auto-reveal', ({ enabled }) => {
+    const gameId = socket.gameId;
+    if (!gameId) return;
+    const game = games.get(gameId);
+    if (!game || game.facilitatorSocketId !== socket.id) return;
+    game.autoRevealOnTimerEnd = !!enabled;
+    io.to(gameId).emit('game-state', game);
+    saveGames();
   });
 
   socket.on('add-issue', ({ title, description }) => {

@@ -32,6 +32,7 @@ const prevIssueBtn = document.getElementById('prevIssueBtn');
 const nextIssueBtn = document.getElementById('nextIssueBtn');
 const startTimerBtn = document.getElementById('startTimerBtn');
 const timerSecondsInput = document.getElementById('timerSeconds');
+const autoRevealToggle = document.getElementById('autoRevealToggle');
 const exportBtn = document.getElementById('exportBtn');
 
 const addIssueModal = document.getElementById('addIssueModal');
@@ -55,6 +56,7 @@ let currentGame = null;
 let mySocketId = null;
 let joined = false;
 let voteTimerInterval = null;
+let lastAutoRevealedTimerEnd = null;
 
 // Theme
 function initTheme() {
@@ -189,12 +191,17 @@ function renderGame(game) {
   }
 
   if (game.voteTimerEnd) {
+    clearInterval(voteTimerInterval);
+    voteTimerInterval = null;
     voteTimerEl.style.display = 'block';
-    updateVoteTimer(game.voteTimerEnd);
-    if (!voteTimerInterval) {
-      voteTimerInterval = setInterval(() => updateVoteTimer(game.voteTimerEnd), 500);
-    }
+    updateVoteTimer(game.voteTimerEnd, game.autoRevealOnTimerEnd, isFacilitator);
+    voteTimerInterval = setInterval(() => {
+      if (currentGame?.voteTimerEnd) {
+        updateVoteTimer(currentGame.voteTimerEnd, currentGame.autoRevealOnTimerEnd, currentGame.facilitatorSocketId === mySocketId);
+      }
+    }, 500);
   } else {
+    lastAutoRevealedTimerEnd = null;
     voteTimerEl.style.display = 'none';
     clearInterval(voteTimerInterval);
     voteTimerInterval = null;
@@ -238,6 +245,8 @@ function renderGame(game) {
   nextIssueBtn.style.display = isFacilitator ? 'inline-block' : 'none';
   startTimerBtn.style.display = isFacilitator ? 'inline-block' : 'none';
   timerSecondsInput.style.display = isFacilitator ? 'inline-block' : 'none';
+  autoRevealToggle.closest('.timer-auto-reveal').style.display = isFacilitator ? 'inline-flex' : 'none';
+  autoRevealToggle.checked = !!game.autoRevealOnTimerEnd;
   exportBtn.style.display = isFacilitator ? 'inline-block' : 'none';
 
   if (isFacilitator) {
@@ -250,10 +259,14 @@ function renderGame(game) {
   }
 }
 
-function updateVoteTimer(endTime) {
+function updateVoteTimer(endTime, autoReveal, isFacilitator) {
   const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
   voteTimerEl.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   voteTimerEl.classList.toggle('expired', left === 0);
+  if (left === 0 && autoReveal && isFacilitator && lastAutoRevealedTimerEnd !== endTime) {
+    lastAutoRevealedTimerEnd = endTime;
+    socket.emit('reveal-votes');
+  }
 }
 
 voteCards.addEventListener('click', (e) => {
@@ -300,7 +313,12 @@ nextIssueBtn.addEventListener('click', () => socket.emit('next-issue'));
 
 startTimerBtn.addEventListener('click', () => {
   const sec = parseInt(timerSecondsInput.value, 10) || 60;
+  lastAutoRevealedTimerEnd = null;
   socket.emit('start-vote-timer', { seconds: sec });
+});
+
+autoRevealToggle.addEventListener('change', () => {
+  socket.emit('set-auto-reveal', { enabled: autoRevealToggle.checked });
 });
 
 exportBtn.addEventListener('click', () => {
