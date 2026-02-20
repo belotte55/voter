@@ -18,6 +18,12 @@
       <div id="connectionIndicator"></div>
     </div>
     <div class="game-header-right">
+      <div class="emoji-selector" id="emojiSelector">
+        <button type="button" id="emojiSelectorBtn" class="emoji-selector-btn" aria-label="Choisir l'emoji à envoyer" aria-haspopup="listbox" aria-expanded="false">
+          <span id="emojiSelectorValue">📄</span>
+        </button>
+        <div id="emojiSelectorMenu" class="emoji-selector-menu" role="listbox" aria-hidden="true"></div>
+      </div>
       <button type="button" id="themeToggle" class="theme-toggle" aria-label="Changer le thème">☀️</button>
       <div class="share-box">
         <label for="gameUrl">Partager l'URL :</label>

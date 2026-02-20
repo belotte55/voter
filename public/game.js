@@ -52,8 +52,9 @@ const deleteIssueBtn = document.getElementById('deleteIssueBtn');
 const themeToggle = document.getElementById('themeToggle');
 const connectionIndicatorContainer = document.getElementById('connectionIndicator');
 
-const EMOJI_PICKER_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
-let emojiPickerEl = null;
+const EMOJI_OPTIONS = ['💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
+const DEFAULT_EMOJI = '💩';
+let selectedEmoji = DEFAULT_EMOJI;
 
 // Parabolic emoji animation: flies from fromRect to toRect, then optional crash effect
 function launchEmoji(emoji, fromRect, toRect, { duration = 800, withCrash = false, onImpact } = {}) {
@@ -368,62 +369,56 @@ voteCards.addEventListener('click', (e) => {
   if (typeof showToast === 'function') showToast('Vote enregistré', 'success');
 });
 
-// Emoji picker: click on participant name to send emoji
-function showEmojiPicker(anchorEl, targetSocketId) {
-  if (!targetSocketId) return;
-  const hide = () => {
-    if (emojiPickerEl) {
-      emojiPickerEl.remove();
-      emojiPickerEl = null;
-    }
-    document.removeEventListener('click', closeOnClickOutside);
-  };
-  const closeOnClickOutside = (e) => {
-    if (emojiPickerEl && !emojiPickerEl.contains(e.target) && !anchorEl.contains(e.target)) hide();
-  };
-  if (emojiPickerEl) emojiPickerEl.remove();
-  emojiPickerEl = document.createElement('div');
-  emojiPickerEl.className = 'emoji-picker';
-  emojiPickerEl.setAttribute('role', 'menu');
-  emojiPickerEl.setAttribute('aria-label', 'Choisir un emoji à envoyer');
-  EMOJI_PICKER_EMOJIS.forEach((emo) => {
+// Emoji selector in header
+const emojiSelectorBtn = document.getElementById('emojiSelectorBtn');
+const emojiSelectorValue = document.getElementById('emojiSelectorValue');
+const emojiSelectorMenu = document.getElementById('emojiSelectorMenu');
+
+function initEmojiSelector() {
+  emojiSelectorMenu.innerHTML = '';
+  EMOJI_OPTIONS.forEach((emo) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'emoji-picker-btn';
+    btn.className = 'emoji-selector-option';
     btn.textContent = emo;
-    btn.setAttribute('aria-label', `Envoyer ${emo}`);
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const btnRect = btn.getBoundingClientRect();
-      const toRect = anchorEl.getBoundingClientRect();
-      hide();
-      launchEmoji(emo, btnRect, toRect, {
-        duration: 600,
-        onImpact: () => {
-          socket.emit('send-emoji', { targetSocketId, emoji: emo });
-          if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
-        },
-      });
+    btn.setAttribute('role', 'option');
+    btn.setAttribute('aria-selected', emo === selectedEmoji);
+    btn.addEventListener('click', () => {
+      selectedEmoji = emo;
+      emojiSelectorValue.textContent = emo;
+      emojiSelectorMenu.classList.remove('open');
+      emojiSelectorBtn.setAttribute('aria-expanded', 'false');
+      emojiSelectorMenu.setAttribute('aria-hidden', 'true');
     });
-    emojiPickerEl.appendChild(btn);
+    emojiSelectorMenu.appendChild(btn);
   });
-  document.body.appendChild(emojiPickerEl);
-  const rect = anchorEl.getBoundingClientRect();
-  emojiPickerEl.style.left = `${rect.left}px`;
-  emojiPickerEl.style.top = `${rect.bottom + 4}px`;
-  requestAnimationFrame(() => {
-    const pickerRect = emojiPickerEl.getBoundingClientRect();
-    if (pickerRect.right > window.innerWidth) emojiPickerEl.style.left = `${window.innerWidth - pickerRect.width - 8}px`;
-    if (pickerRect.bottom > window.innerHeight) emojiPickerEl.style.top = `${rect.top - pickerRect.height - 4}px`;
-  });
-  setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
 }
 
+emojiSelectorBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isOpen = emojiSelectorMenu?.classList.toggle('open');
+  emojiSelectorBtn?.setAttribute('aria-expanded', isOpen);
+  emojiSelectorMenu?.setAttribute('aria-hidden', !isOpen);
+});
+
+document.addEventListener('click', () => {
+  emojiSelectorMenu?.classList.remove('open');
+  emojiSelectorBtn?.setAttribute('aria-expanded', 'false');
+  emojiSelectorMenu?.setAttribute('aria-hidden', 'true');
+});
+
+emojiSelectorMenu?.addEventListener('click', (e) => e.stopPropagation());
+initEmojiSelector();
+
+// Click on participant: send selected emoji (recipient sees it fly from outside and crash)
 participantsList.addEventListener('click', (e) => {
   const li = e.target.closest('li.participant-clickable');
   if (!li) return;
   e.preventDefault();
-  showEmojiPicker(li, li.dataset.id);
+  const targetSocketId = li.dataset.id;
+  if (!targetSocketId) return;
+  socket.emit('send-emoji', { targetSocketId, emoji: selectedEmoji });
+  if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
 });
 
 copyUrlBtn.addEventListener('click', async () => {
