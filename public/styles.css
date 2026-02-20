@@ -1022,6 +1022,8 @@ body {
 /* Participant clickable for emoji */
 .sidebar-section li.participant-clickable {
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sidebar-section li.participant-clickable:hover {
