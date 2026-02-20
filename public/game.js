@@ -208,7 +208,6 @@ socket.on('emoji-received', ({ emoji, fromName, targetSocketId }) => {
   const targetLi = participantsList?.querySelector(`li[data-id="${targetSocketId || mySocketId || socket.id}"]`);
   const toRect = targetLi ? targetLi.getBoundingClientRect() : { left: window.innerWidth / 2 - 20, top: 100, width: 40, height: 24 };
   const fromRect = getOffScreenStart(toRect);
-  const isRecipient = targetSocketId === (mySocketId || socket.id);
   launchEmoji(emoji, fromRect, toRect, {
     duration: 1000,
     withCrash: true,
@@ -218,7 +217,6 @@ socket.on('emoji-received', ({ emoji, fromName, targetSocketId }) => {
         targetLi.classList.add('emoji-hit');
         setTimeout(() => targetLi.classList.remove('emoji-hit'), 400);
       }
-      if (isRecipient && typeof showToast === 'function') showToast(`${fromName} vous envoie ${emoji}`, 'info');
     },
   });
 });
@@ -429,7 +427,6 @@ participantsList.addEventListener('click', (e) => {
   const targetSocketId = li.dataset.id;
   if (!targetSocketId) return;
   socket.emit('send-emoji', { targetSocketId, emoji: selectedEmoji });
-  if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
 });
 
 copyUrlBtn.addEventListener('click', async () => {
