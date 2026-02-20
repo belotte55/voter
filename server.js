@@ -1,6 +1,10 @@
 require('dotenv').config();
 
-const EMOJI_LIST = require('./emojis.js');
+// Single source of truth for emojis. First element is the default.
+const EMOJI_LIST = [
+  '💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌',
+  '🔥', '💯', '✅', '⏳', '🙈', '🚀', '🎯',
+];
 
 const express = require('express');
 const http = require('http');
