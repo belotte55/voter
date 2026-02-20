@@ -381,7 +381,7 @@ io.on('connection', (socket) => {
     const sender = game.participants.find((p) => p.id === socket.id) || game.spectators.find((s) => s.id === socket.id);
     const target = game.participants.find((p) => p.id === targetSocketId) || game.spectators.find((s) => s.id === targetSocketId);
     if (!sender || !target || targetSocketId === socket.id) return;
-    const ALLOWED_EMOJIS = ['📄', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
+    const ALLOWED_EMOJIS = ['📄', '💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
     const safeEmoji = ALLOWED_EMOJIS.includes(emoji) ? emoji : '📄';
     io.to(targetSocketId).emit('emoji-received', {
       emoji: safeEmoji,

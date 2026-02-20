@@ -52,12 +52,12 @@ const deleteIssueBtn = document.getElementById('deleteIssueBtn');
 const themeToggle = document.getElementById('themeToggle');
 const connectionIndicatorContainer = document.getElementById('connectionIndicator');
 
-const EMOJI_OPTIONS = ['💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
+const EMOJI_OPTIONS = ['💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈', '🚀', '🎯'];
 const DEFAULT_EMOJI = '💩';
 let selectedEmoji = DEFAULT_EMOJI;
 
 // Parabolic emoji animation: flies from fromRect to toRect, then optional crash effect
-function launchEmoji(emoji, fromRect, toRect, { duration = 800, withCrash = false, onImpact } = {}) {
+function launchEmoji(emoji, fromRect, toRect, { duration = 800, withCrash = false, randomTarget = false, onImpact } = {}) {
   const el = document.createElement('div');
   el.className = 'emoji-flying';
   el.textContent = emoji;
@@ -66,8 +66,17 @@ function launchEmoji(emoji, fromRect, toRect, { duration = 800, withCrash = fals
   const size = 32;
   const startX = fromRect.left + fromRect.width / 2 - size / 2;
   const startY = fromRect.top + fromRect.height / 2 - size / 2;
-  const endX = toRect.left + toRect.width / 2 - size / 2;
-  const endY = toRect.top + toRect.height / 2 - size / 2;
+
+  // Random landing point within target rect, or center
+  let endX, endY;
+  if (randomTarget && toRect.width > 0 && toRect.height > 0) {
+    const margin = Math.min(size / 2, toRect.width / 4, toRect.height / 4);
+    endX = toRect.left + margin + Math.random() * (toRect.width - 2 * margin) - size / 2;
+    endY = toRect.top + margin + Math.random() * (toRect.height - 2 * margin) - size / 2;
+  } else {
+    endX = toRect.left + toRect.width / 2 - size / 2;
+    endY = toRect.top + toRect.height / 2 - size / 2;
+  }
 
   // Control point for parabola: arc above the path
   const midX = (startX + endX) / 2;
@@ -202,6 +211,7 @@ socket.on('emoji-received', ({ emoji, fromName }) => {
   launchEmoji(emoji, fromRect, toRect, {
     duration: 1000,
     withCrash: true,
+    randomTarget: true,
     onImpact: () => {
       if (targetLi) {
         targetLi.classList.add('emoji-hit');
@@ -410,15 +420,27 @@ document.addEventListener('click', () => {
 emojiSelectorMenu?.addEventListener('click', (e) => e.stopPropagation());
 initEmojiSelector();
 
-// Click on participant: send selected emoji (recipient sees it fly from outside and crash)
+// Click on participant: sender and recipient both see emoji fly from outside and crash
 participantsList.addEventListener('click', (e) => {
   const li = e.target.closest('li.participant-clickable');
   if (!li) return;
   e.preventDefault();
   const targetSocketId = li.dataset.id;
   if (!targetSocketId) return;
+  const toRect = li.getBoundingClientRect();
+  const fromRect = getOffScreenStart(toRect);
+
+  // Sender sees the animation immediately
+  launchEmoji(selectedEmoji, fromRect, toRect, {
+    duration: 1000,
+    withCrash: true,
+    randomTarget: true,
+    onImpact: () => {
+      if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
+    },
+  });
+
   socket.emit('send-emoji', { targetSocketId, emoji: selectedEmoji });
-  if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
 });
 
 copyUrlBtn.addEventListener('click', async () => {
