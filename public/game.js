@@ -204,10 +204,11 @@ socket.on('participant-joined', (game) => {
   }
 });
 
-socket.on('emoji-received', ({ emoji, fromName }) => {
-  const targetLi = participantsList?.querySelector(`li[data-id="${mySocketId || socket.id}"]`);
+socket.on('emoji-received', ({ emoji, fromName, targetSocketId }) => {
+  const targetLi = participantsList?.querySelector(`li[data-id="${targetSocketId || mySocketId || socket.id}"]`);
   const toRect = targetLi ? targetLi.getBoundingClientRect() : { left: window.innerWidth / 2 - 20, top: 100, width: 40, height: 24 };
   const fromRect = getOffScreenStart(toRect);
+  const isRecipient = targetSocketId === (mySocketId || socket.id);
   launchEmoji(emoji, fromRect, toRect, {
     duration: 1000,
     withCrash: true,
@@ -217,7 +218,7 @@ socket.on('emoji-received', ({ emoji, fromName }) => {
         targetLi.classList.add('emoji-hit');
         setTimeout(() => targetLi.classList.remove('emoji-hit'), 400);
       }
-      if (typeof showToast === 'function') showToast(`${fromName} vous envoie ${emoji}`, 'info');
+      if (isRecipient && typeof showToast === 'function') showToast(`${fromName} vous envoie ${emoji}`, 'info');
     },
   });
 });
@@ -420,27 +421,15 @@ document.addEventListener('click', () => {
 emojiSelectorMenu?.addEventListener('click', (e) => e.stopPropagation());
 initEmojiSelector();
 
-// Click on participant: sender and recipient both see emoji fly from outside and crash
+// Click on participant: all participants see emoji via broadcast
 participantsList.addEventListener('click', (e) => {
   const li = e.target.closest('li.participant-clickable');
   if (!li) return;
   e.preventDefault();
   const targetSocketId = li.dataset.id;
   if (!targetSocketId) return;
-  const toRect = li.getBoundingClientRect();
-  const fromRect = getOffScreenStart(toRect);
-
-  // Sender sees the animation immediately
-  launchEmoji(selectedEmoji, fromRect, toRect, {
-    duration: 1000,
-    withCrash: true,
-    randomTarget: true,
-    onImpact: () => {
-      if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
-    },
-  });
-
   socket.emit('send-emoji', { targetSocketId, emoji: selectedEmoji });
+  if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
 });
 
 copyUrlBtn.addEventListener('click', async () => {

@@ -383,9 +383,10 @@ io.on('connection', (socket) => {
     if (!sender || !target || targetSocketId === socket.id) return;
     const ALLOWED_EMOJIS = ['📄', '💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
     const safeEmoji = ALLOWED_EMOJIS.includes(emoji) ? emoji : '📄';
-    io.to(targetSocketId).emit('emoji-received', {
+    io.to(gameId).emit('emoji-received', {
       emoji: safeEmoji,
       fromName: sender.name,
+      targetSocketId,
     });
     log('Emoji sent', { gameId, from: sender.name, to: target.name, emoji: safeEmoji });
   });
