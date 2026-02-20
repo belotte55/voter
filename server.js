@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const EMOJI_LIST = require('./emojis.js');
+
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
@@ -123,6 +125,7 @@ app.get('/game/:id', (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://voter.frank42.fr';
   let html = fs.readFileSync(path.join(__dirname, 'public', 'game.html'), 'utf8');
   html = html.replace('__BASE_URL__', baseUrl.replace(/\/$/, ''));
+  html = html.replace('__EMOJI_LIST__', JSON.stringify(EMOJI_LIST));
   res.type('html').send(html);
 });
 
@@ -381,8 +384,7 @@ io.on('connection', (socket) => {
     const sender = game.participants.find((p) => p.id === socket.id) || game.spectators.find((s) => s.id === socket.id);
     const target = game.participants.find((p) => p.id === targetSocketId) || game.spectators.find((s) => s.id === targetSocketId);
     if (!sender || !target || targetSocketId === socket.id) return;
-    const ALLOWED_EMOJIS = ['📄', '💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
-    const safeEmoji = ALLOWED_EMOJIS.includes(emoji) ? emoji : '📄';
+    const safeEmoji = EMOJI_LIST.includes(emoji) ? emoji : EMOJI_LIST[0];
     io.to(gameId).emit('emoji-received', {
       emoji: safeEmoji,
       fromName: sender.name,

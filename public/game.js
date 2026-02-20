@@ -52,8 +52,8 @@ const deleteIssueBtn = document.getElementById('deleteIssueBtn');
 const themeToggle = document.getElementById('themeToggle');
 const connectionIndicatorContainer = document.getElementById('connectionIndicator');
 
-const EMOJI_OPTIONS = ['💩', '👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈', '🚀', '🎯'];
-const DEFAULT_EMOJI = '💩';
+const EMOJI_OPTIONS = window.EMOJI_LIST || ['💩'];
+const DEFAULT_EMOJI = EMOJI_OPTIONS[0];
 let selectedEmoji = DEFAULT_EMOJI;
 
 // Parabolic emoji animation: flies from fromRect to toRect, then optional crash effect
@@ -240,17 +240,12 @@ function renderGame(game) {
   const isFacilitator = game.facilitatorSocketId === mySocketId;
 
   participantCount.textContent = game.participants.length;
-  const n = game.participants.length;
   participantsList.innerHTML = game.participants
-    .map((p, i) => {
+    .map((p) => {
       const voted = !game.revealed && game.votes[p.id];
       const isSelf = p.id === mySocketId;
       const clickableClass = isSelf ? '' : ' participant-clickable';
-      const angle = n > 0 ? (i / n) * 2 * Math.PI - Math.PI / 2 : 0;
-      const radius = 48;
-      const x = 50 + radius * Math.cos(angle);
-      const y = 50 + radius * Math.sin(angle);
-      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}${clickableClass}" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" title="${isSelf ? '' : 'Cliquer pour envoyer un emoji'}" style="--seat-x: ${x}%; --seat-y: ${y}%;">${escapeHtml(p.name)}</li>`;
+      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}${clickableClass}" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" title="${isSelf ? '' : 'Cliquer pour envoyer un emoji'}">${escapeHtml(p.name)}</li>`;
     })
     .join('');
 
@@ -389,6 +384,8 @@ const emojiSelectorValue = document.getElementById('emojiSelectorValue');
 const emojiSelectorMenu = document.getElementById('emojiSelectorMenu');
 
 function initEmojiSelector() {
+  selectedEmoji = DEFAULT_EMOJI;
+  emojiSelectorValue.textContent = selectedEmoji;
   emojiSelectorMenu.innerHTML = '';
   EMOJI_OPTIONS.forEach((emo) => {
     const btn = document.createElement('button');

@@ -20,7 +20,7 @@
     <div class="game-header-right">
       <div class="emoji-selector" id="emojiSelector">
         <button type="button" id="emojiSelectorBtn" class="emoji-selector-btn" aria-label="Choisir l'emoji à envoyer" aria-haspopup="listbox" aria-expanded="false">
-          <span id="emojiSelectorValue">💩</span>
+          <span id="emojiSelectorValue"></span>
         </button>
         <div id="emojiSelectorMenu" class="emoji-selector-menu" role="listbox" aria-hidden="true"></div>
       </div>
@@ -39,10 +39,7 @@
     <aside class="game-sidebar">
       <section class="sidebar-section">
         <h3>Participants (<span id="participantCount">0</span>)</h3>
-        <div class="participants-table">
-          <div class="table-surface" aria-hidden="true"></div>
-          <ul id="participantsList" class="participants-seats"></ul>
-        </div>
+        <ul id="participantsList"></ul>
       </section>
       <section class="sidebar-section" id="facilitatorSection">
         <h3>Issues</h3>
@@ -139,5 +136,6 @@
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/utils.js"></script>
+<script>window.EMOJI_LIST = __EMOJI_LIST__;</script>
 <script src="/game.js"></script>
 </html>

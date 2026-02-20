@@ -626,69 +626,14 @@ body {
   list-style: none;
 }
 
-/* Participants around table */
-.participants-table {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  min-height: 200px;
-  max-height: 280px;
-}
-
-.participants-table .table-surface {
-  position: absolute;
-  left: 22%;
-  top: 22%;
-  width: 56%;
-  height: 56%;
-  background: var(--bg-elevated);
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.participants-table .participants-seats {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.participants-table .participants-seats li {
-  position: absolute;
-  left: var(--seat-x, 50%);
-  top: var(--seat-y, 50%);
-  transform: translate(-50%, -50%);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.9rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  white-space: nowrap;
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 0.2s, transform 0.2s, border-color 0.2s;
-}
-
-.participants-table .participants-seats li.participant-clickable:hover {
-  transform: translate(-50%, -50%) scale(1.08);
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-
-.participants-table .participants-seats li.emoji-hit {
-  animation: pseudo-hit 0.4s ease-out;
-}
-
-.sidebar-section ul:not(.participants-seats) li {
+.sidebar-section li {
   padding: 0.4rem 0;
   font-size: 0.95rem;
   border-bottom: 1px solid var(--border);
   transition: background 0.2s, transform 0.2s;
 }
 
-.sidebar-section ul:not(.participants-seats) li:last-child {
+.sidebar-section li:last-child {
   border-bottom: none;
 }
 
