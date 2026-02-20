@@ -240,12 +240,17 @@ function renderGame(game) {
   const isFacilitator = game.facilitatorSocketId === mySocketId;
 
   participantCount.textContent = game.participants.length;
+  const n = game.participants.length;
   participantsList.innerHTML = game.participants
-    .map((p) => {
+    .map((p, i) => {
       const voted = !game.revealed && game.votes[p.id];
       const isSelf = p.id === mySocketId;
       const clickableClass = isSelf ? '' : ' participant-clickable';
-      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}${clickableClass}" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" title="${isSelf ? '' : 'Cliquer pour envoyer un emoji'}">${escapeHtml(p.name)}</li>`;
+      const angle = n > 0 ? (i / n) * 2 * Math.PI - Math.PI / 2 : 0;
+      const radius = 48;
+      const x = 50 + radius * Math.cos(angle);
+      const y = 50 + radius * Math.sin(angle);
+      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}${clickableClass}" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" title="${isSelf ? '' : 'Cliquer pour envoyer un emoji'}" style="--seat-x: ${x}%; --seat-y: ${y}%;">${escapeHtml(p.name)}</li>`;
     })
     .join('');
 
