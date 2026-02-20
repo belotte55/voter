@@ -373,6 +373,23 @@ io.on('connection', (socket) => {
     log('Issue edited', { gameId, issueId });
   });
 
+  socket.on('send-emoji', ({ targetSocketId, emoji }) => {
+    const gameId = socket.gameId;
+    if (!gameId || !targetSocketId || !emoji) return;
+    const game = games.get(gameId);
+    if (!game) return;
+    const sender = game.participants.find((p) => p.id === socket.id) || game.spectators.find((s) => s.id === socket.id);
+    const target = game.participants.find((p) => p.id === targetSocketId) || game.spectators.find((s) => s.id === targetSocketId);
+    if (!sender || !target || targetSocketId === socket.id) return;
+    const ALLOWED_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
+    const safeEmoji = ALLOWED_EMOJIS.includes(emoji) ? emoji : '👍';
+    io.to(targetSocketId).emit('emoji-received', {
+      emoji: safeEmoji,
+      fromName: sender.name,
+    });
+    log('Emoji sent', { gameId, from: sender.name, to: target.name, emoji: safeEmoji });
+  });
+
   socket.on('delete-issue', ({ issueId }) => {
     const gameId = socket.gameId;
     if (!gameId) return;

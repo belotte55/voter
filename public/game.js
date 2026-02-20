@@ -52,6 +52,71 @@ const deleteIssueBtn = document.getElementById('deleteIssueBtn');
 const themeToggle = document.getElementById('themeToggle');
 const connectionIndicatorContainer = document.getElementById('connectionIndicator');
 
+const EMOJI_PICKER_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👏', '🙌', '🔥', '💯', '✅', '⏳', '🙈'];
+let emojiPickerEl = null;
+
+// Parabolic emoji animation: flies from fromRect to toRect, then optional crash effect
+function launchEmoji(emoji, fromRect, toRect, { duration = 800, withCrash = false, onImpact } = {}) {
+  const el = document.createElement('div');
+  el.className = 'emoji-flying';
+  el.textContent = emoji;
+  document.body.appendChild(el);
+
+  const size = 32;
+  const startX = fromRect.left + fromRect.width / 2 - size / 2;
+  const startY = fromRect.top + fromRect.height / 2 - size / 2;
+  const endX = toRect.left + toRect.width / 2 - size / 2;
+  const endY = toRect.top + toRect.height / 2 - size / 2;
+
+  // Control point for parabola: arc above the path
+  const midX = (startX + endX) / 2;
+  const arcHeight = Math.min(120, Math.abs(endY - startY) + 80);
+  const ctrlY = Math.min(startY, endY) - arcHeight;
+
+  let startTime = null;
+  function animate(now) {
+    if (!startTime) startTime = now;
+    const t = Math.min(1, (now - startTime) / duration);
+    const easeOut = 1 - Math.pow(1 - t, 1.5);
+
+    // Quadratic Bezier: P0, P1 (control), P2
+    const x = (1 - easeOut) ** 2 * startX + 2 * (1 - easeOut) * easeOut * midX + easeOut ** 2 * endX;
+    const y = (1 - easeOut) ** 2 * startY + 2 * (1 - easeOut) * easeOut * ctrlY + easeOut ** 2 * endY;
+
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+      return;
+    }
+
+    if (withCrash) {
+      el.classList.add('emoji-crash');
+      el.addEventListener('animationend', () => {
+        el.remove();
+        onImpact?.();
+      }, { once: true });
+    } else {
+      el.remove();
+      onImpact?.();
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function getOffScreenStart(destinationRect) {
+  const edge = Math.floor(Math.random() * 4);
+  const pad = 80;
+  const size = 40;
+  const destX = destinationRect.left + destinationRect.width / 2;
+  const destY = destinationRect.top + destinationRect.height / 2;
+  if (edge === 0) return { left: destX - size / 2 + (Math.random() - 0.5) * 200, top: -pad, width: size, height: size };
+  if (edge === 1) return { left: window.innerWidth + pad, top: destY - size / 2 + (Math.random() - 0.5) * 200, width: size, height: size };
+  if (edge === 2) return { left: destX - size / 2 + (Math.random() - 0.5) * 200, top: window.innerHeight + pad, width: size, height: size };
+  return { left: -pad, top: destY - size / 2 + (Math.random() - 0.5) * 200, width: size, height: size };
+}
+
 let currentGame = null;
 let mySocketId = null;
 let joined = false;
@@ -122,6 +187,30 @@ socket.on('game-state', (game) => {
   renderGame(game);
 });
 
+socket.on('participant-joined', (game) => {
+  if (currentGame && game.id === currentGame.id) {
+    currentGame = game;
+    renderGame(game);
+  }
+});
+
+socket.on('emoji-received', ({ emoji, fromName }) => {
+  const targetLi = participantsList?.querySelector(`li[data-id="${mySocketId || socket.id}"]`);
+  const toRect = targetLi ? targetLi.getBoundingClientRect() : { left: window.innerWidth / 2 - 20, top: 100, width: 40, height: 24 };
+  const fromRect = getOffScreenStart(toRect);
+  launchEmoji(emoji, fromRect, toRect, {
+    duration: 1000,
+    withCrash: true,
+    onImpact: () => {
+      if (targetLi) {
+        targetLi.classList.add('emoji-hit');
+        setTimeout(() => targetLi.classList.remove('emoji-hit'), 400);
+      }
+      if (typeof showToast === 'function') showToast(`${fromName} vous envoie ${emoji}`, 'info');
+    },
+  });
+});
+
 socket.on('error', (data) => {
   if (typeof showToast === 'function') {
     showToast(data.message || 'Une erreur est survenue', 'error');
@@ -144,7 +233,9 @@ function renderGame(game) {
   participantsList.innerHTML = game.participants
     .map((p) => {
       const voted = !game.revealed && game.votes[p.id];
-      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}" data-id="${escapeHtml(p.id)}">${escapeHtml(p.name)}</li>`;
+      const isSelf = p.id === mySocketId;
+      const clickableClass = isSelf ? '' : ' participant-clickable';
+      return `<li class="${p.isFacilitator ? 'facilitator' : ''} ${voted ? 'participant-voted' : ''}${clickableClass}" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" title="${isSelf ? '' : 'Cliquer pour envoyer un emoji'}">${escapeHtml(p.name)}</li>`;
     })
     .join('');
 
@@ -275,6 +366,64 @@ voteCards.addEventListener('click', (e) => {
   const value = card.dataset.value;
   socket.emit('vote', { value });
   if (typeof showToast === 'function') showToast('Vote enregistré', 'success');
+});
+
+// Emoji picker: click on participant name to send emoji
+function showEmojiPicker(anchorEl, targetSocketId) {
+  if (!targetSocketId) return;
+  const hide = () => {
+    if (emojiPickerEl) {
+      emojiPickerEl.remove();
+      emojiPickerEl = null;
+    }
+    document.removeEventListener('click', closeOnClickOutside);
+  };
+  const closeOnClickOutside = (e) => {
+    if (emojiPickerEl && !emojiPickerEl.contains(e.target) && !anchorEl.contains(e.target)) hide();
+  };
+  if (emojiPickerEl) emojiPickerEl.remove();
+  emojiPickerEl = document.createElement('div');
+  emojiPickerEl.className = 'emoji-picker';
+  emojiPickerEl.setAttribute('role', 'menu');
+  emojiPickerEl.setAttribute('aria-label', 'Choisir un emoji à envoyer');
+  EMOJI_PICKER_EMOJIS.forEach((emo) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'emoji-picker-btn';
+    btn.textContent = emo;
+    btn.setAttribute('aria-label', `Envoyer ${emo}`);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const btnRect = btn.getBoundingClientRect();
+      const toRect = anchorEl.getBoundingClientRect();
+      hide();
+      launchEmoji(emo, btnRect, toRect, {
+        duration: 600,
+        onImpact: () => {
+          socket.emit('send-emoji', { targetSocketId, emoji: emo });
+          if (typeof showToast === 'function') showToast('Emoji envoyé', 'success');
+        },
+      });
+    });
+    emojiPickerEl.appendChild(btn);
+  });
+  document.body.appendChild(emojiPickerEl);
+  const rect = anchorEl.getBoundingClientRect();
+  emojiPickerEl.style.left = `${rect.left}px`;
+  emojiPickerEl.style.top = `${rect.bottom + 4}px`;
+  requestAnimationFrame(() => {
+    const pickerRect = emojiPickerEl.getBoundingClientRect();
+    if (pickerRect.right > window.innerWidth) emojiPickerEl.style.left = `${window.innerWidth - pickerRect.width - 8}px`;
+    if (pickerRect.bottom > window.innerHeight) emojiPickerEl.style.top = `${rect.top - pickerRect.height - 4}px`;
+  });
+  setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
+}
+
+participantsList.addEventListener('click', (e) => {
+  const li = e.target.closest('li.participant-clickable');
+  if (!li) return;
+  e.preventDefault();
+  showEmojiPicker(li, li.dataset.id);
 });
 
 copyUrlBtn.addEventListener('click', async () => {
